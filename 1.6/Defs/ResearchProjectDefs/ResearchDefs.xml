@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+
+  <ResearchProjectDef>
+    <defName>RRS_RobotRepairResearch</defName>
+    <label>mechanoid repair systems</label>
+    <description>Develop automated repair systems capable of diagnosing and restoring damaged mechanoids. Unlocks the Robot Repair Station, which allows mechanoids to self-repair when their health is critically low.</description>
+    <baseCost>1200</baseCost>
+    <techLevel>Spacer</techLevel>
+    <prerequisites>
+      <li>MechanoidBasics</li>
+    </prerequisites>
+    <researchViewX>12.0</researchViewX>
+    <researchViewY>4.5</researchViewY>
+    <tab>Biotech</tab>
+  </ResearchProjectDef>
+
+</Defs>

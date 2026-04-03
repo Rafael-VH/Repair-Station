@@ -18,12 +18,12 @@
             "linux": {
                 // https://github.com/pardeike/Rimworld-Doorstop?tab=readme-ov-file#quick-start--linux-with-rider
                 "runtimeExecutable": "sh",
-                "runtimeArgs": [ 
+                "runtimeArgs": [
                     "-c", "if [ -f ./run.sh ]; then ./run.sh; else ./RimWorldLinux; fi"
                 ],
                 "preLaunchTask": "BuildLinuxDLL",
             }
-        },  
+        },
         {
             "name": "Attach Debugger",
             "type": "mono",

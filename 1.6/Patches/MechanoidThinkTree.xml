@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Patch>
+
+  <Operation Class="PatchOperationSequence">
+    <success>Always</success>
+    <operations>
+
+      <li Class="PatchOperationTest">
+        <xpath>/Defs/ThinkTreeDef[defName="MechanoidConstant"]</xpath>
+        <success>Always</success>
+      </li>
+
+      <li Class="PatchOperationInsert">
+        <xpath>/Defs/ThinkTreeDef[defName="MechanoidConstant"]/thinkRoot/subNodes/li[@Class="ThinkNode_Priority"]/subNodes</xpath>
+        <order>Prepend</order>
+        <value>
+          <li Class="RobotRepairStation.ThinkNode_ConditionalNeedsRepair">
+            <subNodes>
+              <li Class="RobotRepairStation.JobGiver_GoToRepairStation"/>
+            </subNodes>
+          </li>
+        </value>
+      </li>
+
+    </operations>
+  </Operation>
+
+</Patch>

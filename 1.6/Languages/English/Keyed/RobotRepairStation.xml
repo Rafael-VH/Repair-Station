@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+
+  <!-- Inspector Panel -->
+  <RRS_InspectorCurrentOccupant>Repairing: {0}</RRS_InspectorCurrentOccupant>
+  <RRS_InspectorEmpty>Idle - waiting for damaged mechanoid</RRS_InspectorEmpty>
+  <RRS_InspectorNoPower>No power - station offline</RRS_InspectorNoPower>
+  <RRS_InspectorNoSteel>No steel - repairs halted</RRS_InspectorNoSteel>
+
+  <!-- Gizmos -->
+  <RRS_GizmoSetThreshold>Set repair threshold</RRS_GizmoSetThreshold>
+  <RRS_GizmoSetThresholdDesc>Set the health percentage at which mechanoids will seek this repair station.</RRS_GizmoSetThresholdDesc>
+  <RRS_GizmoEjectOccupant>Eject mechanoid</RRS_GizmoEjectOccupant>
+  <RRS_GizmoEjectOccupantDesc>Force the current mechanoid to leave the repair station.</RRS_GizmoEjectOccupantDesc>
+
+  <!-- Letters / Notifications -->
+  <RRS_LetterRepairCompleteLabel>Repair complete</RRS_LetterRepairCompleteLabel>
+  <RRS_LetterRepairCompleteText>{0} has been fully repaired at the robot repair station.</RRS_LetterRepairCompleteText>
+  <RRS_LetterNoSteelLabel>Repair halted</RRS_LetterNoSteelLabel>
+  <RRS_LetterNoSteelText>The robot repair station has run out of steel and cannot continue repairing {0}.</RRS_LetterNoSteelText>
+
+  <!-- Stat Labels -->
+  <RRS_StatRepairSpeed>Repair speed</RRS_StatRepairSpeed>
+  <RRS_StatRepairSpeedDesc>How quickly this station repairs mechanoid health per day.</RRS_StatRepairSpeedDesc>
+
+</LanguageData>

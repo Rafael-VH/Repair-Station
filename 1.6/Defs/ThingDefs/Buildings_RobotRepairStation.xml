@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+
+  <ThingDef ParentName="BuildingBase">
+    <defName>RRS_RobotRepairStation</defName>
+    <label>robot repair station</label>
+    <description>A specialized docking station that repairs damaged mechanoids. When a mechanoid's health drops below the configured threshold, it will autonomously navigate to this station and undergo automated repair using steel components. Requires a constant power supply to function.</description>
+    <thingClass>RobotRepairStation.Building_RobotRepairStation</thingClass>
+
+    <graphicData>
+      <texPath>Things/Buildings/RobotRepairStation</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(2,2)</drawSize>
+      <shadowData>
+        <volume>(1.8, 0.5, 1.0)</volume>
+        <offset>(0, 0, -0.4)</offset>
+      </shadowData>
+    </graphicData>
+
+    <altitudeLayer>Building</altitudeLayer>
+    <passability>PassThroughOnly</passability>
+    <blockWind>false</blockWind>
+    <castEdgeShadows>true</castEdgeShadows>
+    <fillPercent>0.4</fillPercent>
+    <canOverlapZones>false</canOverlapZones>
+
+    <statBases>
+      <MaxHitPoints>300</MaxHitPoints>
+      <WorkToBuild>4000</WorkToBuild>
+      <Flammability>0.5</Flammability>
+      <Beauty>-2</Beauty>
+    </statBases>
+
+    <tickerType>Normal</tickerType>
+    <size>(2,2)</size>
+
+    <costList>
+      <Steel>150</Steel>
+      <ComponentIndustrial>4</ComponentIndustrial>
+      <ComponentSpacer>1</ComponentSpacer>
+    </costList>
+
+    <comps>
+      <li Class="CompProperties_Power">
+        <compClass>CompPowerTrader</compClass>
+        <basePowerConsumption>250</basePowerConsumption>
+        <shortCircuitInRain>false</shortCircuitInRain>
+      </li>
+      <li Class="CompProperties_Flickable"/>
+      <li Class="CompProperties_Breakdownable"/>
+      <li Class="RobotRepairStation.CompProperties_RobotRepairStation">
+        <repairHealthThreshold>0.5</repairHealthThreshold>
+        <repairSpeedPerTick>0.0005</repairSpeedPerTick>
+        <steelPerRepairCycle>1</steelPerRepairCycle>
+        <repairTickInterval>500</repairTickInterval>
+        <maxRepairRange>30</maxRepairRange>
+      </li>
+    </comps>
+
+    <building>
+      <ai_chillDestination>false</ai_chillDestination>
+      <preventDeteriorationOnTop>true</preventDeteriorationOnTop>
+    </building>
+
+    <placeWorkers>
+      <li>PlaceWorker_ShowFacilitiesConnections</li>
+    </placeWorkers>
+
+    <researchPrerequisites>
+      <li>RRS_RobotRepairResearch</li>
+    </researchPrerequisites>
+
+    <designationCategory>Misc</designationCategory>
+    <uiOrder>2800</uiOrder>
+    <minifiedDef>MinifiedThing</minifiedDef>
+    <thingCategories>
+      <li>BuildingsMisc</li>
+    </thingCategories>
+  </ThingDef>
+
+</Defs>

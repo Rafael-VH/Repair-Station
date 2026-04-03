@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+
+  <!-- Inspector Panel -->
+  <RRS_InspectorCurrentOccupant>Reparando: {0}</RRS_InspectorCurrentOccupant>
+  <RRS_InspectorEmpty>En espera - aguardando mecanoide daado</RRS_InspectorEmpty>
+  <RRS_InspectorNoPower>Sin energia - estacion fuera de linea</RRS_InspectorNoPower>
+  <RRS_InspectorNoSteel>Sin acero - reparacion detenida</RRS_InspectorNoSteel>
+
+  <!-- Gizmos -->
+  <RRS_GizmoSetThreshold>Ajustar umbral de reparacion</RRS_GizmoSetThreshold>
+  <RRS_GizmoSetThresholdDesc>Establece el porcentaje de salud a partir del cual los mecanoides buscaran esta estacion de reparacion.</RRS_GizmoSetThresholdDesc>
+  <RRS_GizmoEjectOccupant>Expulsar mecanoide</RRS_GizmoEjectOccupant>
+  <RRS_GizmoEjectOccupantDesc>Fuerza al mecanoide actual a abandonar la estacion de reparacion.</RRS_GizmoEjectOccupantDesc>
+
+  <!-- Letters / Notifications -->
+  <RRS_LetterRepairCompleteLabel>Reparacion completada</RRS_LetterRepairCompleteLabel>
+  <RRS_LetterRepairCompleteText>{0} ha sido reparado por completo en la estacion de reparacion de robots.</RRS_LetterRepairCompleteText>
+  <RRS_LetterNoSteelLabel>Reparacion interrumpida</RRS_LetterNoSteelLabel>
+  <RRS_LetterNoSteelText>La estacion de reparacion de robots se ha quedado sin acero y no puede continuar reparando a {0}.</RRS_LetterNoSteelText>
+
+  <!-- Stat Labels -->
+  <RRS_StatRepairSpeed>Velocidad de reparacion</RRS_StatRepairSpeed>
+  <RRS_StatRepairSpeedDesc>Que tan rapido repara esta estacion la salud de los mecanoides por dia.</RRS_StatRepairSpeedDesc>
+
+</LanguageData>
