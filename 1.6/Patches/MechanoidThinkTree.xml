@@ -1,28 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Patch>
 
-  <Operation Class="PatchOperationSequence">
-    <success>Always</success>
-    <operations>
+  <!--
+    Inyecta el nodo de reparación al inicio del ThinkNode_Priority de MechanoidConstant.
 
-      <li Class="PatchOperationTest">
-        <xpath>/Defs/ThinkTreeDef[defName="MechanoidConstant"]</xpath>
-        <success>Always</success>
-      </li>
-
-      <li Class="PatchOperationInsert">
-        <xpath>/Defs/ThinkTreeDef[defName="MechanoidConstant"]/thinkRoot/subNodes/li[@Class="ThinkNode_Priority"]/subNodes</xpath>
-        <order>Prepend</order>
-        <value>
-          <li Class="RobotRepairStation.ThinkNode_ConditionalNeedsRepair">
-            <subNodes>
-              <li Class="RobotRepairStation.JobGiver_GoToRepairStation"/>
-            </subNodes>
-          </li>
-        </value>
-      </li>
-
-    </operations>
+    Se usa PatchOperationConditional en lugar del par obsoleto PatchOperationSequence
+    + PatchOperationTest con <success>Always</success>. El Conditional aplica el parche
+    solo si el XPath existe y no suprime errores legítimos si el árbol cambia en el futuro.
+  -->
+  <Operation Class="PatchOperationConditional">
+    <xpath>/Defs/ThinkTreeDef[defName="MechanoidConstant"]</xpath>
+    <match Class="PatchOperationInsert">
+      <xpath>/Defs/ThinkTreeDef[defName="MechanoidConstant"]/thinkRoot/subNodes/li[@Class="ThinkNode_Priority"]/subNodes</xpath>
+      <order>Prepend</order>
+      <value>
+        <li Class="RobotRepairStation.ThinkNode_ConditionalNeedsRepair">
+          <subNodes>
+            <li Class="RobotRepairStation.JobGiver_GoToRepairStation"/>
+          </subNodes>
+        </li>
+      </value>
+    </match>
   </Operation>
 
 </Patch>

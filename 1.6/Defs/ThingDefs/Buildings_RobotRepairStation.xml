@@ -62,10 +62,6 @@
       <preventDeteriorationOnTop>true</preventDeteriorationOnTop>
     </building>
 
-    <placeWorkers>
-      <li>PlaceWorker_ShowFacilitiesConnections</li>
-    </placeWorkers>
-
     <researchPrerequisites>
       <li>RRS_RobotRepairResearch</li>
     </researchPrerequisites>

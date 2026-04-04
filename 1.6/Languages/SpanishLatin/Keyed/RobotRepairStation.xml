@@ -3,7 +3,7 @@
 
   <!-- Inspector Panel -->
   <RRS_InspectorCurrentOccupant>Reparando: {0}</RRS_InspectorCurrentOccupant>
-  <RRS_InspectorEmpty>En espera - aguardando mecanoide daado</RRS_InspectorEmpty>
+  <RRS_InspectorEmpty>En espera - aguardando mecanoide dañado</RRS_InspectorEmpty>
   <RRS_InspectorNoPower>Sin energia - estacion fuera de linea</RRS_InspectorNoPower>
   <RRS_InspectorNoSteel>Sin acero - reparacion detenida</RRS_InspectorNoSteel>
 
