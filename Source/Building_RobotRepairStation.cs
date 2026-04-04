@@ -9,9 +9,12 @@ using System.Linq;
 namespace RobotRepairStation
 {
     /// <summary>
-    /// Clase principal del edificio Robot Repair Station.
-    /// Gestiona: registro en RepairStationTracker, aceptación/expulsión de mecanoides,
-    /// consumo de acero con buffer interno, persistencia save/load, y UI (gizmos + inspector).
+    /// Edificio principal del Robot Repair Station.
+    ///
+    /// Gestiona el ciclo de vida del ocupante, el buffer de acero, la persistencia
+    /// save/load y la UI (gizmos + inspector). La lógica de curación tick a tick
+    /// reside en <see cref="CompRobotRepairStation"/> para mantener las
+    /// responsabilidades separadas.
     /// </summary>
     public class Building_RobotRepairStation : Building
     {
@@ -20,31 +23,37 @@ namespace RobotRepairStation
         /// <summary>Mecanoid actualmente en reparación. Serializado como referencia.</summary>
         private Pawn currentOccupant;
 
-        /// <summary>Buffer interno de acero (unidades). Evita búsquedas en el mapa cada ciclo.</summary>
+        /// <summary>
+        /// Buffer interno de acero (unidades). Reduce las búsquedas en el mapa
+        /// a una vez cada vez que el buffer se agota, en lugar de cada ciclo.
+        /// </summary>
         private int steelBuffer = 0;
 
         private const int SteelBufferMax = 50;
 
-        // ─── Cachés de comps ──────────────────────────────────────────────────
+        // ─── Cachés de comps (inicializados en SpawnSetup) ───────────────────
 
         private CompProperties_RobotRepairStation cachedCompProps;
         private CompPowerTrader cachedPowerComp;
 
         // ─── Propiedades públicas ─────────────────────────────────────────────
 
-        public CompProperties_RobotRepairStation RepairProps =>
-            cachedCompProps ?? (cachedCompProps = GetComp<CompRobotRepairStation>()?.Props);
+        /// <summary>
+        /// Propiedades de configuración del comp de reparación.
+        /// El valor se garantiza tras SpawnSetup; acceder antes puede devolver null.
+        /// </summary>
+        public CompProperties_RobotRepairStation RepairProps => cachedCompProps;
 
-        /// <summary>true si hay un mecanoid docked y está vivo.</summary>
+        /// <summary>Devuelve <c>true</c> si hay un mecanoid docked y está vivo.</summary>
         public bool IsOccupied => currentOccupant != null && !currentOccupant.Dead;
 
-        /// <summary>true si el CompPowerTrader está alimentado.</summary>
+        /// <summary>Devuelve <c>true</c> si el CompPowerTrader está alimentado.</summary>
         public bool HasPower => cachedPowerComp?.PowerOn ?? false;
 
-        /// <summary>true si el buffer interno tiene al menos 1 unidad de acero.</summary>
+        /// <summary>Devuelve <c>true</c> si el buffer interno tiene al menos 1 unidad de acero.</summary>
         public bool HasSteel => steelBuffer > 0;
 
-        /// <summary>El mecanoid docked, o null si la estación está libre.</summary>
+        /// <summary>El mecanoid docked, o <c>null</c> si la estación está libre.</summary>
         public Pawn CurrentOccupant => currentOccupant;
 
         // ═══════════════════════════════════════════════════════════════════════
@@ -56,15 +65,15 @@ namespace RobotRepairStation
             base.SpawnSetup(map, respawningAfterLoad);
 
             // Cachear comps una sola vez para evitar búsquedas lineales en cada tick.
-            cachedPowerComp = GetComp<CompPowerTrader>();
-            cachedCompProps = GetComp<CompRobotRepairStation>()?.Props;
+            cachedPowerComp  = GetComp<CompPowerTrader>();
+            cachedCompProps  = GetComp<CompRobotRepairStation>()?.Props;
 
             RepairStationTracker.GetOrCreate(map).Register(this);
         }
 
         /// <summary>
         /// Validación post-carga: si el ocupante guardado no tiene el job de reparación
-        /// activo ni en cola, limpiar el estado para desbloquear la estación.
+        /// activo ni en cola, se limpia el estado para desbloquear la estación.
         /// </summary>
         public override void PostMapInit()
         {
@@ -90,7 +99,11 @@ namespace RobotRepairStation
 
         public override void DeSpawn(DestroyMode mode = DestroyMode.Vanish)
         {
-            RepairStationTracker.GetOrCreate(Map).Deregister(this);
+            // Map puede ser null en estados intermedios (minificación, caravanas).
+            // La guarda evita una NullReferenceException al desregistrar.
+            if (Map != null)
+                RepairStationTracker.GetOrCreate(Map).Deregister(this);
+
             EjectOccupant();
             base.DeSpawn(mode);
         }
@@ -111,9 +124,14 @@ namespace RobotRepairStation
         // ═══════════════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// Consume acero del buffer cada repairTickInterval ticks.
-        /// CompRobotRepairStation.CompTick() aplica curación en el mismo tick,
-        /// verificando HasSteel antes de curar para evitar ciclos gratuitos.
+        /// Consume acero del buffer cada <c>repairTickInterval</c> ticks.
+        ///
+        /// Se aplica un offset derivado del ID único del edificio (<c>thingIDNumber.HashOffset()</c>)
+        /// para distribuir los ticks de múltiples estaciones a lo largo del frame y evitar
+        /// picos de CPU cuando varias instancias coinciden en el mismo tick exacto.
+        ///
+        /// <see cref="CompRobotRepairStation.CompTick"/> aplica la curación en el mismo
+        /// intervalo y verifica <see cref="HasSteel"/> antes de curar.
         /// </summary>
         protected override void Tick()
         {
@@ -123,7 +141,7 @@ namespace RobotRepairStation
             if (!IsOccupied)         return;
             if (RepairProps == null) return;
 
-            if (Find.TickManager.TicksGame % RepairProps.repairTickInterval == 0)
+            if ((Find.TickManager.TicksGame + thingIDNumber.HashOffset()) % RepairProps.repairTickInterval == 0)
                 TryConsumeSteel();
         }
 
@@ -132,8 +150,10 @@ namespace RobotRepairStation
         // ═══════════════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// Acepta un mecanoid como ocupante. Llamado desde JobDriver_GoToRepairStation.
+        /// Acepta un mecanoid como ocupante. Llamado desde
+        /// <see cref="JobDriver_GoToRepairStation"/> al llegar a la celda de interacción.
         /// </summary>
+        /// <returns><c>true</c> si el mecanoid fue aceptado correctamente.</returns>
         public bool TryAcceptOccupant(Pawn mechanoid)
         {
             if (IsOccupied) return false;
@@ -144,9 +164,9 @@ namespace RobotRepairStation
         }
 
         /// <summary>
-        /// Limpia currentOccupant cuando la reparación completa normalmente.
-        /// El driver detecta el null en tickAction y termina el job.
-        /// Solo llamado desde CompRobotRepairStation.OnRepairComplete.
+        /// Limpia <c>currentOccupant</c> cuando la reparación se completa normalmente.
+        /// El driver detecta el <c>null</c> en su <c>tickAction</c> y termina el job.
+        /// Solo debe llamarse desde <see cref="CompRobotRepairStation"/>.
         /// </summary>
         public void NotifyOccupantLeft()
         {
@@ -154,11 +174,12 @@ namespace RobotRepairStation
         }
 
         /// <summary>
-        /// Fuerza la salida del mecanoid. Escenarios: sin acero, sin energía,
-        /// estación destruida, o gizmo manual del jugador.
+        /// Fuerza la salida del mecanoid docked. Se usa cuando la estación pierde
+        /// energía, se queda sin acero, es destruida, o el jugador lo solicita
+        /// manualmente mediante el gizmo de expulsión.
         ///
-        /// NO llama manualmente a reservationManager.Release porque EndCurrentJob
-        /// ya limpia las reservas del driver internamente, evitando doble Release.
+        /// No llama a <c>reservationManager.Release</c> directamente porque
+        /// <c>EndCurrentJob</c> ya limpia las reservas del driver internamente.
         /// </summary>
         public void EjectOccupant()
         {
@@ -176,9 +197,9 @@ namespace RobotRepairStation
         // ═══════════════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// Camino rápido: descuenta del buffer sin búsqueda en el mapa.
-        /// Si el buffer se vacía, busca acero en radio 8 celdas y recarga el buffer.
-        /// Sin acero disponible: notifica al jugador y expulsa al ocupante.
+        /// Descuenta acero del buffer interno. Si el buffer se vacía, busca acero
+        /// en un radio de 8 celdas y recarga hasta <see cref="SteelBufferMax"/> unidades.
+        /// Si no se encuentra acero, notifica al jugador y expulsa al ocupante.
         /// </summary>
         private void TryConsumeSteel()
         {
