@@ -11,6 +11,8 @@
 **Automated repair docking station for BioTech mechanoids.**
 When damaged, your mechanoids will autonomously seek out the station and self-repair — no micromanagement required.
 
+> 📖 **Documentación en español** disponible en [`docs/es/README.md`](docs/es/README.md)
+
 ---
 
 ## ✨ Features
@@ -133,6 +135,10 @@ RobotRepairStation/
 │   └── Things/
 │       └── Buildings/
 │           └── RobotRepairStation.png       ← 128×128 building sprite (must be added)
+│
+├── docs/
+│   └── es/
+│       └── README.md                        ← Documentación completa en español
 │
 └── .vscode/
     ├── mod.csproj                           ← Project file (net480, x64)
