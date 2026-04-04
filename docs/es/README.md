@@ -12,6 +12,7 @@
 Cuando están dañados, tus mecanoides buscarán la estación de forma autónoma y se repararán solos — sin necesidad de microgestión.
 
 > 📖 **English documentation** available at [`../../README.md`](../../README.md)
+> 📖 **Documentação em português** disponible en [`../pt/README.md`](../pt/README.md)
 
 ---
 
@@ -35,53 +36,53 @@ Cuando están dañados, tus mecanoides buscarán la estación de forma autónoma
 El mod se construye alrededor de cuatro sistemas interconectados:
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    CAPA DE IA (ThinkTree)                       │
-│                                                                 │
-│  ThinkNode_ConditionalNeedsRepair                               │
-│    └─ Comprueba: ¿es mecanoide? ¿del jugador? ¿salud<umbral?   │
-│       └─ JobGiver_GoToRepairStation                             │
-│            └─ Emite: job RRS_GoToRepairStation                  │
-└──────────────────────────────┬──────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                    CAPA DE IA (ThinkTree)                        │
+│                                                                  │
+│  ThinkNode_ConditionalNeedsRepair                                │
+│    └─ Comprueba: ¿es mecanoide? ¿del jugador? ¿salud<umbral?     │
+│       └─ JobGiver_GoToRepairStation                              │
+│            └─ Emite: job RRS_GoToRepairStation                   │
+└──────────────────────────────┬───────────────────────────────────┘
                                │
                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                       CAPA DE JOBS                              │
-│                                                                 │
-│  JobDriver_GoToRepairStation                                    │
-│    1. GotoThing → caminar hasta InteractionCell                 │
-│    2. dock (Instant) → TryAcceptOccupant → encolar job reparo   │
-│                                                                 │
-│  JobDriver_RepairAtStation                                      │
-│    - Espera (ToilCompleteMode.Never)                            │
-│    - Termina cuando CurrentOccupant pasa a null                 │
-└──────────────────────────────┬──────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                       CAPA DE JOBS                               │
+│                                                                  │
+│  JobDriver_GoToRepairStation                                     │
+│    1. GotoThing → caminar hasta InteractionCell                  │
+│    2. dock (Instant) → TryAcceptOccupant → encolar job reparo    │
+│                                                                  │
+│  JobDriver_RepairAtStation                                       │
+│    - Espera (ToilCompleteMode.Never)                             │
+│    - Termina cuando CurrentOccupant pasa a null                  │
+└──────────────────────────────┬───────────────────────────────────┘
                                │
                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    CAPA DEL EDIFICIO                            │
-│                                                                 │
-│  Building_RobotRepairStation                                    │
-│    - Gestiona ocupante (TryAcceptOccupant / EjectOccupant)      │
-│    - Tick: TryConsumeSteel cada repairTickInterval              │
-│    - Buffer de acero (hasta 50 uds) evita búsquedas por tick   │
-│    - Gizmos, InspectString, guardar/cargar                      │
-│                                                                 │
-│  CompRobotRepairStation (ThingComp)                             │
-│    - CompTick: ApplyRepairTick cada repairTickInterval          │
-│    - Cura todas las instancias Hediff_Injury activas            │
-│    - Llama a OnRepairComplete cuando salud ≥ 99%               │
-└──────────────────────────────┬──────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                    CAPA DEL EDIFICIO                             │
+│                                                                  │
+│  Building_RobotRepairStation                                     │
+│    - Gestiona ocupante (TryAcceptOccupant / EjectOccupant)       │
+│    - Tick: TryConsumeSteel cada repairTickInterval               │
+│    - Buffer de acero (hasta 50 uds) evita búsquedas por tick     │
+│    - Gizmos, InspectString, guardar/cargar                       │
+│                                                                  │
+│  CompRobotRepairStation (ThingComp)                              │
+│    - CompTick: ApplyRepairTick cada repairTickInterval           │
+│    - Cura todas las instancias Hediff_Injury activas             │
+│    - Llama a OnRepairComplete cuando salud ≥ 99%                 │
+└──────────────────────────────┬───────────────────────────────────┘
                                │
                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    CAPA DE REGISTRO                             │
-│                                                                 │
-│  RepairStationTracker (MapComponent)                            │
-│    - Registro/baja en O(1) en SpawnSetup / DeSpawn              │
-│    - Los ThinkNodes iteran esta lista en lugar de buscar el mapa│
-│    - Declarado en MapComponentDefs.xml; instanciado por RW      │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                    CAPA DE REGISTRO                              │
+│                                                                  │
+│  RepairStationTracker (MapComponent)                             │
+│    - Registro/baja en O(1) en SpawnSetup / DeSpawn               │
+│    - Los ThinkNodes iteran esta lista en lugar de buscar el mapa │
+│    - Declarado en MapComponentDefs.xml; instanciado por RW       │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---

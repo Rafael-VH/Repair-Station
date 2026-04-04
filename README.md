@@ -1,4 +1,4 @@
-# 🤖 Repair Station
+# 🤖 Robot Repair Station
 
 ## A RimWorld BioTech Mod
 
@@ -12,6 +12,7 @@
 When damaged, your mechanoids will autonomously seek out the station and self-repair — no micromanagement required.
 
 > 📖 **Documentación en español** disponible en [`docs/es/README.md`](docs/es/README.md)
+> 📖 **Documentação em português** disponível em [`docs/pt/README.md`](docs/pt/README.md)
 
 ---
 
@@ -137,8 +138,10 @@ RobotRepairStation/
 │           └── RobotRepairStation.png       ← 128×128 building sprite (must be added)
 │
 ├── docs/
-│   └── es/
-│       └── README.md                        ← Documentación completa en español
+│   ├── es/
+│   │   └── README.md                        ← Documentación completa en español
+│   └── pt/
+│       └── README.md                        ← Documentação completa em português
 │
 └── .vscode/
     ├── mod.csproj                           ← Project file (net480, x64)
