@@ -17,7 +17,7 @@
 	</PropertyGroup>
 
  	<ItemGroup>
-	 	<Compile Include="../Source/*" />
+	 	<Compile Include="../Source/*.cs" />
 		<PackageReference Include="Krafs.Rimworld.Ref" Version="*" />
 		<!-- *Uncomment for Harmony* -->
 		<!-- <PackageReference Include="Lib.Harmony" Version="*" /> -->

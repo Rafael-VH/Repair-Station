@@ -31,9 +31,6 @@ namespace RobotRepairStation
                 pawn.CurJob?.def == RRS_JobDefOf.RRS_GoToRepairStation)
                 return false;
 
-            // Búsqueda de estación (operación más rapida): solo si pasó los filtros anteriores.
-            if (pawn.health.summaryHealth.SummaryHealthPercent >= 0.5f) return false;
-
             // Búsqueda de estación (operación más cara): solo si pasó los filtros anteriores.
             var comp = RepairStationUtility.FindBestRepairStationComp(pawn);
             if (comp == null) return false;
