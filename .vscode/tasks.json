@@ -9,7 +9,7 @@
                 "isDefault": true
             },
             "command": [
-                "dotnet build .vscode"
+                "dotnet build .vscode/mod.csproj"
             ],
         },
         {
