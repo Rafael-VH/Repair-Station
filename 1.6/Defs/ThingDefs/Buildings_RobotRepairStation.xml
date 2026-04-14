@@ -48,6 +48,32 @@
       </li>
       <li Class="CompProperties_Flickable"/>
       <li Class="CompProperties_Breakdownable"/>
+
+      <!--
+        CompRefuelable con acero como combustible.
+        Colonos reabastecen automáticamente cuando baja del 25 % (autoRefuelPercent).
+        fuelConsumptionRate = 0 porque el consumo lo gestiona Building_RobotRepairStation
+        manualmente en cada ciclo de reparación (steelPerRepairCycle).
+        consumeFuelOnlyWhenUsed = true evita que el ticker interno reste combustible.
+      -->
+      <li Class="CompProperties_Refuelable">
+        <fuelLabel>Steel</fuelLabel>
+        <fuelGizmoLabel>Steel reserves</fuelGizmoLabel>
+        <fuelFilter>
+          <thingDefs>
+            <li>Steel</li>
+          </thingDefs>
+        </fuelFilter>
+        <fuelCapacity>50</fuelCapacity>
+        <initialFuelPercent>0</initialFuelPercent>
+        <autoRefuelPercent>0.25</autoRefuelPercent>
+        <showFuelGizmo>true</showFuelGizmo>
+        <minimumFueledThreshold>1</minimumFueledThreshold>
+        <fuelConsumptionRate>0</fuelConsumptionRate>
+        <consumeFuelOnlyWhenUsed>true</consumeFuelOnlyWhenUsed>
+        <targetFuelLevelConfigurable>false</targetFuelLevelConfigurable>
+      </li>
+
       <li Class="RobotRepairStation.CompProperties_RobotRepairStation">
         <repairHealthThreshold>0.5</repairHealthThreshold>
         <repairSpeedPerTick>0.0005</repairSpeedPerTick>

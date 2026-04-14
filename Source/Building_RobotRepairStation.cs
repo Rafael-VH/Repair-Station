@@ -4,7 +4,6 @@ using RimWorld;
 using UnityEngine;
 using Verse;
 using Verse.AI;
-using Verse.Sound;
 using System.Linq;
 
 namespace RobotRepairStation
@@ -12,17 +11,17 @@ namespace RobotRepairStation
     /// <summary>
     /// Edificio principal del Robot Repair Station.
     ///
-    /// Gestiona el ciclo de vida del ocupante, el buffer de acero, la persistencia
-    /// save/load y la UI (gizmos + inspector). La lógica de curación tick a tick
-    /// reside en <see cref="CompRobotRepairStation"/> para mantener las
-    /// responsabilidades separadas.
+    /// Gestiona el ciclo de vida del ocupante, el consumo de acero vía
+    /// <see cref="CompRefuelable"/>, la persistencia save/load y la UI
+    /// (gizmos + inspector).
     ///
-    /// Mejoras respecto a la versión inicial:
-    /// - Gizmo de umbral de salud funcional (ajusta CompRobotRepairStation.repairThreshold).
-    /// - Gizmo de prioridad por estación (permite al jugador preferir una estación sobre otra).
-    /// - Notificación de "sin acero" convertida a carta persistente.
-    /// - Efectos visuales al aceptar ocupante (polvo) y al expulsarlo.
-    /// - InspectString mejorado con % de umbral activo y prioridad.
+    /// El acero ya no se busca manualmente en el mapa: RimWorld gestiona
+    /// automáticamente el reabastecimiento mediante trabajos de transporte
+    /// asignados a colonos, igual que el generador de combustible.
+    ///
+    /// La lógica de curación tick a tick reside en
+    /// <see cref="CompRobotRepairStation"/> para mantener las
+    /// responsabilidades separadas.
     /// </summary>
     public class Building_RobotRepairStation : Building
     {
@@ -31,28 +30,14 @@ namespace RobotRepairStation
         /// <summary>Mecanoide actualmente en reparación. Serializado como referencia.</summary>
         private Pawn currentOccupant;
 
-        /// <summary>
-        /// Buffer interno de acero (unidades). Reduce las búsquedas en el mapa
-        /// a una vez cada vez que el buffer se agota, en lugar de cada ciclo.
-        /// </summary>
-        private int steelBuffer = 0;
-
-        /// <summary>
-        /// Prioridad de esta estación (1 = más alta, valores mayores = más baja).
-        /// Los mecanoides preferirán la estación con menor número de prioridad
-        /// cuando varias sean accesibles. Serializado para persistir entre sesiones.
-        /// </summary>
-        private int stationPriority = 1;
-
-        private const int SteelBufferMax = 50;
-        private const int PriorityMin = 1;
-        private const int PriorityMax = 9;
+        // NOTA: steelBuffer eliminado — CompRefuelable es ahora la única fuente
+        // de verdad sobre el nivel de acero disponible.
 
         // ─── Cachés de comps (inicializados en SpawnSetup) ───────────────────
 
         private CompProperties_RobotRepairStation cachedCompProps;
-        private CompPowerTrader cachedPowerComp;
-        private CompRobotRepairStation cachedComp;
+        private CompPowerTrader   cachedPowerComp;
+        private CompRefuelable    cachedRefuelComp;   // ← nuevo
 
         // ─── Propiedades públicas ─────────────────────────────────────────────
 
@@ -68,25 +53,15 @@ namespace RobotRepairStation
         /// <summary>Devuelve <c>true</c> si el CompPowerTrader está alimentado.</summary>
         public bool HasPower => cachedPowerComp?.PowerOn ?? false;
 
-        /// <summary>Devuelve <c>true</c> si el buffer interno tiene al menos 1 unidad de acero.</summary>
-        public bool HasSteel => steelBuffer > 0;
+        /// <summary>
+        /// Devuelve <c>true</c> si el depósito de acero contiene al menos
+        /// 1 unidad disponible para el próximo ciclo de reparación.
+        /// Delegado en CompRefuelable para consistencia con la UI.
+        /// </summary>
+        public bool HasSteel => (cachedRefuelComp?.Fuel ?? 0f) >= 1f;
 
         /// <summary>El mecanoide docked, o <c>null</c> si la estación está libre.</summary>
         public Pawn CurrentOccupant => currentOccupant;
-
-        /// <summary>
-        /// Prioridad de esta estación para la búsqueda de mecanoides.
-        /// Valor más bajo = mayor prioridad. Rango: 1–9.
-        /// </summary>
-        public int StationPriority => stationPriority;
-
-        /// <summary>
-        /// Umbral de salud activo para esta instancia.
-        /// Lee el valor del comp serializado (ajustable por el jugador).
-        /// Fallback al valor de props si el comp no está disponible aún.
-        /// </summary>
-        public float ActiveRepairThreshold =>
-            cachedComp?.repairThreshold ?? cachedCompProps?.repairHealthThreshold ?? 0.5f;
 
         // ═══════════════════════════════════════════════════════════════════════
         //  CICLO DE VIDA
@@ -97,9 +72,9 @@ namespace RobotRepairStation
             base.SpawnSetup(map, respawningAfterLoad);
 
             // Cachear comps una sola vez para evitar búsquedas lineales en cada tick.
-            cachedPowerComp = GetComp<CompPowerTrader>();
-            cachedComp = GetComp<CompRobotRepairStation>();
-            cachedCompProps = cachedComp?.Props;
+            cachedPowerComp  = GetComp<CompPowerTrader>();
+            cachedRefuelComp = GetComp<CompRefuelable>();      // ← nuevo
+            cachedCompProps  = GetComp<CompRobotRepairStation>()?.Props;
 
             RepairStationTracker.GetOrCreate(map).Register(this);
         }
@@ -115,8 +90,8 @@ namespace RobotRepairStation
             if (currentOccupant == null) return;
 
             bool hasActiveJob =
-                currentOccupant.CurJob?.def == RRS_JobDefOf.RRS_RepairAtStation ||
-                currentOccupant.CurJob?.def == RRS_JobDefOf.RRS_GoToRepairStation ||
+                currentOccupant.CurJob?.def == RRS_JobDefOf.RRS_RepairAtStation   ||
+                currentOccupant.CurJob?.def == RRS_JobDefOf.RRS_GoToRepairStation  ||
                 (currentOccupant.jobs?.jobQueue?.Any(
                     qj => qj.job?.def == RRS_JobDefOf.RRS_RepairAtStation ||
                           qj.job?.def == RRS_JobDefOf.RRS_GoToRepairStation) ?? false);
@@ -148,8 +123,7 @@ namespace RobotRepairStation
         {
             base.ExposeData();
             Scribe_References.Look(ref currentOccupant, "currentOccupant");
-            Scribe_Values.Look(ref steelBuffer, "steelBuffer", 0);
-            Scribe_Values.Look(ref stationPriority, "stationPriority", 1);
+            // steelBuffer eliminado: CompRefuelable serializa su propio estado.
         }
 
         // ═══════════════════════════════════════════════════════════════════════
@@ -157,18 +131,21 @@ namespace RobotRepairStation
         // ═══════════════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// Consume acero del buffer cada <c>repairTickInterval</c> ticks.
+        /// Consume acero del depósito (CompRefuelable) cada
+        /// <c>repairTickInterval</c> ticks mientras haya un mecanoide docked.
         ///
-        /// Se aplica un offset derivado del ID único del edificio (<c>thingIDNumber.HashOffset()</c>)
-        /// para distribuir los ticks de múltiples estaciones a lo largo del frame y evitar
-        /// picos de CPU cuando varias instancias coinciden en el mismo tick exacto.
+        /// El offset derivado de <c>thingIDNumber.HashOffset()</c> distribuye los
+        /// ticks de múltiples estaciones a lo largo del frame para evitar picos de CPU.
+        ///
+        /// <see cref="CompRobotRepairStation.CompTick"/> aplica la curación en el
+        /// mismo intervalo y verifica <see cref="HasSteel"/> antes de curar.
         /// </summary>
         protected override void Tick()
         {
             base.Tick();
 
-            if (!HasPower) return;
-            if (!IsOccupied) return;
+            if (!HasPower)           return;
+            if (!IsOccupied)         return;
             if (RepairProps == null) return;
 
             if ((Find.TickManager.TicksGame + thingIDNumber.HashOffset()) % RepairProps.repairTickInterval == 0)
@@ -187,21 +164,15 @@ namespace RobotRepairStation
         public bool TryAcceptOccupant(Pawn mechanoid)
         {
             if (IsOccupied) return false;
-            if (!HasPower) return false;
+            if (!HasPower)  return false;
 
             currentOccupant = mechanoid;
-
-            if (Spawned)
-            {
-                FleckMaker.ThrowDustPuff(DrawPos, Map, 1.5f);
-                SoundDefOf.TinyBell.PlayOneShot(SoundInfo.InMap(new TargetInfo(Position, Map)));
-            }
-
             return true;
         }
 
         /// <summary>
         /// Limpia <c>currentOccupant</c> cuando la reparación se completa normalmente.
+        /// El driver detecta el <c>null</c> en su <c>tickAction</c> y termina el job.
         /// Solo debe llamarse desde <see cref="CompRobotRepairStation"/>.
         /// </summary>
         public void NotifyOccupantLeft()
@@ -212,13 +183,13 @@ namespace RobotRepairStation
         /// <summary>
         /// Fuerza la salida del mecanoide docked. Se usa cuando la estación pierde
         /// energía, se queda sin acero, es destruida, o el jugador lo solicita
-        /// manualmente mediante el gizmo de expulsión.
+        /// mediante el gizmo de expulsión.
         /// </summary>
         public void EjectOccupant()
         {
             if (!IsOccupied) return;
 
-            Pawn occupant = currentOccupant;
+            Pawn occupant   = currentOccupant;
             currentOccupant = null;
 
             if (occupant.CurJob?.def == RRS_JobDefOf.RRS_RepairAtStation)
@@ -226,56 +197,42 @@ namespace RobotRepairStation
         }
 
         // ═══════════════════════════════════════════════════════════════════════
-        //  CONSUMO DE ACERO
+        //  CONSUMO DE ACERO  (ahora delegado en CompRefuelable)
         // ═══════════════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// Descuenta acero del buffer interno. Si el buffer se vacía, busca acero
-        /// en un radio de 8 celdas y recarga hasta <see cref="SteelBufferMax"/> unidades.
-        /// Si no se encuentra acero, notifica al jugador con una carta persistente y
-        /// expulsa al ocupante.
+        /// Descuenta <see cref="CompProperties_RobotRepairStation.steelPerRepairCycle"/>
+        /// unidades del depósito de acero gestionado por <see cref="CompRefuelable"/>.
+        ///
+        /// Si el depósito no tiene suficiente acero:
+        ///   - Se notifica al jugador con un mensaje negativo.
+        ///   - Se expulsa al mecanoide docked.
+        ///
+        /// El reabastecimiento posterior es automático: RimWorld asignará un trabajo
+        /// de transporte a un colono en cuanto el nivel baje del umbral configurado
+        /// en <c>autoRefuelPercent</c>, igual que el generador de combustible.
         /// </summary>
         private void TryConsumeSteel()
         {
             int toConsume = RepairProps?.steelPerRepairCycle ?? 1;
 
-            if (steelBuffer >= toConsume)
+            if (cachedRefuelComp == null)
             {
-                steelBuffer -= toConsume;
+                Log.Error("[RobotRepairStation] CompRefuelable no encontrado en la estación. Verifica el ThingDef.");
                 return;
             }
 
-            TraverseParms traverseParams = currentOccupant != null
-                ? TraverseParms.For(currentOccupant, Danger.Deadly)
-                : TraverseParms.For(TraverseMode.NoPassClosedDoors);
-
-            Thing steel = GenClosest.ClosestThingReachable(
-                Position,
-                Map,
-                ThingRequest.ForDef(ThingDefOf.Steel),
-                PathEndMode.ClosestTouch,
-                traverseParams,
-                maxDistance: 8f
-            );
-
-            if (steel != null)
+            if (cachedRefuelComp.Fuel >= toConsume)
             {
-                int take = Mathf.Min(steel.stackCount, SteelBufferMax);
-
-                steel.stackCount -= take;
-                if (steel.stackCount <= 0)
-                    steel.Destroy(DestroyMode.Vanish);
-
-                steelBuffer = Mathf.Max(0, take - toConsume);
+                cachedRefuelComp.ConsumeFuel(toConsume);
             }
             else
             {
-                // Carta persistente en lugar de mensaje efímero.
-                Find.LetterStack.ReceiveLetter(
-                    "RRS_LetterNoSteelLabel".Translate(),
+                // Sin acero suficiente: notificar y expulsar.
+                Messages.Message(
                     "RRS_LetterNoSteelText".Translate(currentOccupant?.LabelShort ?? "mechanoid"),
-                    LetterDefOf.NegativeEvent,
-                    this
+                    this,
+                    MessageTypeDefOf.NegativeEvent
                 );
                 EjectOccupant();
             }
@@ -289,61 +246,17 @@ namespace RobotRepairStation
         {
             foreach (Gizmo g in base.GetGizmos())
                 yield return g;
+            // NOTA: CompRefuelable añade automáticamente el gizmo de nivel de acero
+            // y el botón de reabastecimiento. No se necesita código extra aquí.
 
-            // ── Gizmo: ajustar umbral de salud ───────────────────────────────
-            // Permite al jugador cambiar el % de salud a partir del cual los
-            // mecanoides buscan esta estación. El valor se persiste en
-            // CompRobotRepairStation.repairThreshold (serializado).
-            yield return new Command_Action
-            {
-                defaultLabel = "RRS_GizmoSetThreshold".Translate() +
-                               $": {ActiveRepairThreshold.ToStringPercent("F0")}",
-                defaultDesc = "RRS_GizmoSetThresholdDesc".Translate(),
-                icon = ContentFinder<Texture2D>.Get("UI/Commands/SetTargetFuelLevel", false)
-                               ?? BaseContent.BadTex,
-                action = () =>
-                {
-                    if (cachedComp == null) return;
-
-                    // Dialog_Slider(Func<int,string> textGetter, int min, int max, Action<int> setter, int initial)
-                    // Constructor posicional en RimWorld 1.6 — sin nombres de parámetro.
-                    int initialPct = Mathf.RoundToInt(ActiveRepairThreshold * 100f);
-                    Find.WindowStack.Add(new Dialog_Slider(
-                        x => "RRS_GizmoSetThreshold".Translate() + $": {(x / 100f).ToStringPercent("F0")}",
-                        1,
-                        100,
-                        val => cachedComp.repairThreshold = val / 100f,
-                        initialPct
-                    ));
-                }
-            };
-
-            // ── Gizmo: prioridad de la estación ──────────────────────────────
-            // Valor 1 = mayor prioridad. Los mecanoides prefieren la estación con
-            // menor número cuando varias son accesibles. Cicla entre 1 y PriorityMax.
-            yield return new Command_Action
-            {
-                defaultLabel = "RRS_GizmoPriority".Translate() + $": {stationPriority}",
-                defaultDesc = "RRS_GizmoPriorityDesc".Translate(),
-                icon = ContentFinder<Texture2D>.Get("UI/Commands/ReorderUp", false)
-                               ?? BaseContent.BadTex,
-                action = () =>
-                {
-                    // Cíclico: 1 → 2 → … → PriorityMax → 1
-                    stationPriority = (stationPriority % PriorityMax) + 1;
-                }
-            };
-
-            // ── Gizmo: expulsar ocupante ─────────────────────────────────────
             if (IsOccupied)
             {
                 yield return new Command_Action
                 {
                     defaultLabel = "RRS_GizmoEjectOccupant".Translate(),
-                    defaultDesc = "RRS_GizmoEjectOccupantDesc".Translate(),
-                    icon = ContentFinder<Texture2D>.Get("UI/Commands/LaunchReport", false)
-                                   ?? BaseContent.BadTex,
-                    action = EjectOccupant
+                    defaultDesc  = "RRS_GizmoEjectOccupantDesc".Translate(),
+                    icon         = ContentFinder<Texture2D>.Get("UI/Commands/LaunchReport"),
+                    action       = EjectOccupant
                 };
             }
         }
@@ -366,20 +279,8 @@ namespace RobotRepairStation
             }
             else if (IsOccupied)
             {
-                float healthPct = currentOccupant.health.summaryHealth.SummaryHealthPercent;
                 sb.AppendLine("RRS_InspectorCurrentOccupant".Translate(currentOccupant.LabelShort));
-                sb.AppendLine($"Health: {healthPct * 100f:F0}%");
-
-                // Tiempo estimado de reparación restante.
-                float healthToRecover = 1f - healthPct;
-                if (healthToRecover > 0f && RepairProps != null && RepairProps.repairSpeedPerTick > 0f)
-                {
-                    // HP recuperados por tick efectivo = repairSpeedPerTick (por lesión).
-                    // Estimación conservadora: asume 1 lesión activa promedio.
-                    float ticksLeft = (healthToRecover / RepairProps.repairSpeedPerTick) * RepairProps.repairTickInterval;
-                    sb.AppendLine("RRS_InspectorETA".Translate(((int)ticksLeft).ToStringTicksToPeriod()));
-                }
-
+                sb.AppendLine($"Health: {currentOccupant.health.summaryHealth.SummaryHealthPercent * 100f:F0}%");
                 if (!HasSteel)
                     sb.AppendLine("RRS_InspectorNoSteel".Translate());
             }
@@ -388,9 +289,8 @@ namespace RobotRepairStation
                 sb.AppendLine("RRS_InspectorEmpty".Translate());
             }
 
-            sb.AppendLine($"Steel buffer: {steelBuffer}/{SteelBufferMax}");
-            sb.AppendLine("RRS_InspectorThreshold".Translate(ActiveRepairThreshold.ToStringPercent("F0")));
-            sb.Append("RRS_InspectorPriority".Translate(stationPriority));
+            // El nivel de acero detallado ya lo muestra CompRefuelable en su propio
+            // bloque del inspector ("Steel: X / 50"), así que no se duplica aquí.
 
             return sb.ToString().TrimEndNewlines();
         }
