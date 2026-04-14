@@ -10,32 +10,61 @@ namespace RobotRepairStation
 
     /// <summary>
     /// Nodo condicional inyectado al inicio del ThinkNode_Priority de MechanoidConstant
-    /// mediante Patches/MechanoidThinkTree.xml. Evalúa si el mecanoid necesita reparación.
+    /// mediante Patches/MechanoidThinkTree.xml. Evalúa si el mecanoide necesita reparación.
     ///
     /// Orden de evaluación (de más barata a más cara):
-    ///   1. ¿Es mecanoid?
-    ///   2. ¿Es del jugador?
+    ///   1. ¿Es mecanoide? (<c>RaceProps.IsMechanoid</c> — cubre mecanoides de mods externos)
+    ///   2. ¿Está bajo control del jugador? (cubre tanto Faction.OfPlayer como IsColonistPlayerControlled)
     ///   3. ¿Ya está en un job de reparación (activo o en cola)?
     ///   4. ¿Hay una estación válida y alcanzable? (operación más costosa, al final)
-    ///   5. ¿La salud está bajo el umbral configurado?
+    ///   5. ¿La salud está bajo el umbral configurado en esa estación?
+    ///
+    /// Compatibilidad con mods:
+    ///   La comprobación de control del jugador usa <c>IsColonistPlayerControlled</c>
+    ///   además de <c>Faction == Faction.OfPlayer</c> para cubrir mecanoides de mods
+    ///   que usen facciones aliadas o mecánicas de control alternativas.
     /// </summary>
     public class ThinkNode_ConditionalNeedsRepair : ThinkNode_Conditional
     {
         protected override bool Satisfied(Pawn pawn)
         {
-            if (!pawn.RaceProps.IsMechanoid)      return false;
-            if (pawn.Faction != Faction.OfPlayer)  return false;
+            // 1. ¿Es mecanoide? RaceProps.IsMechanoid es true para todos los mecanoides
+            //    del juego base Y de mods externos que declaren su raza correctamente.
+            if (!pawn.RaceProps.IsMechanoid) return false;
 
-            // Evitar interrumpir una reparación ya en curso.
+            // 2. ¿Está bajo control del jugador?
+            //    - Faction.OfPlayer cubre el caso vanilla.
+            //    - IsColonistPlayerControlled cubre mecanoides de mods con facciones
+            //      aliadas o mecánicas de control propias (p. ej. Gestalt Engine,
+            //      mods de mecanoides humanoides como Mechadroids, etc.).
+            if (pawn.Faction != Faction.OfPlayer && !pawn.IsColonistPlayerControlled)
+                return false;
+
+            // 3. Evitar interrumpir una reparación ya en curso.
             if (pawn.CurJob?.def == RRS_JobDefOf.RRS_RepairAtStation   ||
                 pawn.CurJob?.def == RRS_JobDefOf.RRS_GoToRepairStation)
                 return false;
 
-            // Búsqueda de estación (operación más cara): solo si pasó los filtros anteriores.
+            // También verificar la cola de jobs (podría estar caminando hacia otra tarea
+            // pero con el job de reparación encolado).
+            if (pawn.jobs?.jobQueue != null)
+            {
+                foreach (var qj in pawn.jobs.jobQueue)
+                {
+                    if (qj.job?.def == RRS_JobDefOf.RRS_RepairAtStation   ||
+                        qj.job?.def == RRS_JobDefOf.RRS_GoToRepairStation)
+                        return false;
+                }
+            }
+
+            // 4. Búsqueda de estación (operación más cara): solo si pasó los filtros anteriores.
             var comp = RepairStationUtility.FindBestRepairStationComp(pawn);
             if (comp == null) return false;
 
-            return pawn.health.summaryHealth.SummaryHealthPercent < comp.Props.repairHealthThreshold;
+            // 5. ¿La salud está bajo el umbral configurable de ESA estación?
+            //    Usa repairThreshold (valor por instancia ajustado por el jugador),
+            //    no el valor estático de Props.
+            return pawn.health.summaryHealth.SummaryHealthPercent < comp.repairThreshold;
         }
     }
 
@@ -85,16 +114,20 @@ namespace RobotRepairStation
     public static class RepairStationUtility
     {
         /// <summary>
-        /// Encuentra la estación válida más cercana al pawn.
+        /// Encuentra la estación válida más adecuada para el pawn.
         ///
         /// Criterios de filtrado (ordenados de más baratos a más caros):
         /// <list type="number">
         ///   <item>Estación no destruida.</item>
         ///   <item>Estación con energía activa.</item>
-        ///   <item>No ocupada por otro mecanoid distinto al solicitante.</item>
+        ///   <item>No ocupada por otro mecanoide distinto al solicitante.</item>
         ///   <item>Alcanzable por el pawn (<c>CanReach</c>, operación costosa).</item>
         ///   <item>Dentro del rango <c>maxRepairRange</c> configurado.</item>
         /// </list>
+        ///
+        /// Ordenamiento final:
+        ///   Se elige la estación con menor <c>StationPriority</c> (1 = más alta).
+        ///   En caso de empate de prioridad, se desempata por distancia.
         ///
         /// Retorna <c>null</c> si el mapa del pawn es <c>null</c> (p. ej. en caravana)
         /// o si ninguna estación cumple los criterios.
@@ -105,7 +138,8 @@ namespace RobotRepairStation
 
             var tracker = RepairStationTracker.GetOrCreate(pawn.Map);
             Building_RobotRepairStation best = null;
-            float bestDist = float.MaxValue;
+            int   bestPriority = int.MaxValue;
+            float bestDist     = float.MaxValue;
 
             foreach (var station in tracker.AllStations)
             {
@@ -122,10 +156,14 @@ namespace RobotRepairStation
                 float dist = pawn.Position.DistanceTo(station.Position);
                 if (dist > maxRange) continue;
 
-                if (dist < bestDist)
+                int priority = station.StationPriority;
+
+                // Mejor estación: menor prioridad primero; distancia como desempate.
+                if (priority < bestPriority || (priority == bestPriority && dist < bestDist))
                 {
-                    bestDist = dist;
-                    best     = station;
+                    bestPriority = priority;
+                    bestDist     = dist;
+                    best         = station;
                 }
             }
 

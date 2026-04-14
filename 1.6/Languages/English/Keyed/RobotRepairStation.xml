@@ -6,10 +6,15 @@
   <RRS_InspectorEmpty>Idle - waiting for damaged mechanoid</RRS_InspectorEmpty>
   <RRS_InspectorNoPower>No power - station offline</RRS_InspectorNoPower>
   <RRS_InspectorNoSteel>No steel - repairs halted</RRS_InspectorNoSteel>
+  <RRS_InspectorETA>Est. time remaining: {0}</RRS_InspectorETA>
+  <RRS_InspectorThreshold>Repair threshold: {0}</RRS_InspectorThreshold>
+  <RRS_InspectorPriority>Station priority: {0}</RRS_InspectorPriority>
 
   <!-- Gizmos -->
   <RRS_GizmoSetThreshold>Set repair threshold</RRS_GizmoSetThreshold>
   <RRS_GizmoSetThresholdDesc>Set the health percentage at which mechanoids will seek this repair station.</RRS_GizmoSetThresholdDesc>
+  <RRS_GizmoPriority>Station priority</RRS_GizmoPriority>
+  <RRS_GizmoPriorityDesc>Set the priority of this repair station. Mechanoids prefer stations with a lower priority number (1 = highest priority). Click to cycle through values 1–9.</RRS_GizmoPriorityDesc>
   <RRS_GizmoEjectOccupant>Eject mechanoid</RRS_GizmoEjectOccupant>
   <RRS_GizmoEjectOccupantDesc>Force the current mechanoid to leave the repair station.</RRS_GizmoEjectOccupantDesc>
 

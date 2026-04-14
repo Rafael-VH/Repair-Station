@@ -6,7 +6,7 @@ namespace RobotRepairStation
 {
     /// <summary>
     /// Driver del job RRS_RepairAtStation.
-    /// Mantiene al mecanoid quieto en la estación mientras CompRobotRepairStation
+    /// Mantiene al mecanoide quieto en la estación mientras CompRobotRepairStation
     /// aplica curación tick a tick. Termina cuando CurrentOccupant pasa a null.
     ///
     /// Este job es siempre encolado por JobDriver_GoToRepairStation.
@@ -21,7 +21,6 @@ namespace RobotRepairStation
         /// <summary>
         /// No reserva de nuevo: la reserva ya existe desde JobDriver_GoToRepairStation.
         /// IsContinuation() garantiza que RimWorld la reutiliza.
-        /// Reservar aquí causaría una reserva duplicada y un doble Release al terminar.
         /// </summary>
         public override bool TryMakePreToilReservations(bool errorOnFailed) => true;
 
@@ -32,15 +31,12 @@ namespace RobotRepairStation
 
             var wait = new Toil();
 
-            // Detener al pawn y orientarlo hacia la estación como feedback visual.
             wait.initAction = () =>
             {
                 pawn.pather.StopDead();
                 pawn.rotationTracker.FaceTarget(Station);
             };
 
-            // Monitorizar CurrentOccupant: cuando pasa a null (reparación completa
-            // o expulsión forzada), terminar el job limpiamente.
             wait.tickAction = () =>
             {
                 if (Station.CurrentOccupant != pawn)
@@ -55,8 +51,7 @@ namespace RobotRepairStation
 
         /// <summary>
         /// Override vacío intencional: la interrupción por daño está desactivada
-        /// a nivel de JobDef (checkOverrideOnDamage=false). Este override documenta
-        /// explícitamente que la decisión fue consciente.
+        /// a nivel de JobDef (checkOverrideOnDamage=false).
         /// </summary>
         public override void Notify_DamageTaken(DamageInfo dinfo)
         {

@@ -12,13 +12,13 @@ namespace RobotRepairStation
     public static class RRS_JobDefOf
     {
         /// <summary>
-        /// Job de navegación: el mecanoid se desplaza hasta la InteractionCell de la estación.
+        /// Job de navegación: el mecanoide se desplaza hasta la InteractionCell de la estación.
         /// Emitido por JobGiver_GoToRepairStation, ejecutado por JobDriver_GoToRepairStation.
         /// </summary>
         public static JobDef RRS_GoToRepairStation;
 
         /// <summary>
-        /// Job de reparación: el mecanoid permanece en la estación mientras CompRobotRepairStation
+        /// Job de reparación: el mecanoide permanece en la estación mientras CompRobotRepairStation
         /// aplica curación tick a tick. Termina cuando CurrentOccupant pasa a null.
         /// </summary>
         public static JobDef RRS_RepairAtStation;

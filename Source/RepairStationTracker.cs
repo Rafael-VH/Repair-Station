@@ -23,9 +23,9 @@ namespace RobotRepairStation
         public RepairStationTracker(Map map) : base(map) { }
 
         /// <summary>
-        /// Obtiene el tracker del mapa usando la API de RimWorld (<c>map.GetComponent&lt;T&gt;()</c>).
-        /// Solo crea uno nuevo si no existe, lo cual sirve de red de seguridad para casos
-        /// donde el MapComponentDef no pudo instanciar el componente correctamente.
+        /// Obtiene el tracker del mapa. Solo crea uno nuevo si no existe,
+        /// lo cual sirve de red de seguridad para casos donde el MapComponentDef
+        /// no pudo instanciar el componente correctamente.
         /// </summary>
         public static RepairStationTracker GetOrCreate(Map map)
         {

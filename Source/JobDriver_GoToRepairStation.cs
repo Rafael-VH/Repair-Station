@@ -6,7 +6,7 @@ namespace RobotRepairStation
 {
     /// <summary>
     /// Driver del job RRS_GoToRepairStation.
-    /// Mueve el mecanoid hasta la InteractionCell de la estación y, al llegar,
+    /// Mueve el mecanoide hasta la InteractionCell de la estación y, al llegar,
     /// intenta registrarse como ocupante y encola RRS_RepairAtStation.
     ///
     /// Flujo de toils:

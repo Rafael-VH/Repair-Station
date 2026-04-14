@@ -12,10 +12,18 @@ namespace RobotRepairStation
     /// Leídas desde el XML del ThingDef (bloque CompProperties_RobotRepairStation).
     /// Todos los campos tienen valores por defecto para compatibilidad con saves
     /// que no tengan el campo explícito.
+    ///
+    /// NOTA: repairHealthThreshold NO se lee aquí en tiempo de ejecución;
+    /// el valor ajustable por el jugador vive en CompRobotRepairStation.repairThreshold
+    /// (campo serializado). Este valor de props actúa solo como valor inicial por defecto.
     /// </summary>
     public class CompProperties_RobotRepairStation : CompProperties
     {
-        /// <summary>Fracción de salud (0–1) bajo la que el mecanoid busca reparación.</summary>
+        /// <summary>
+        /// Umbral de salud inicial (0–1). El jugador puede sobreescribirlo
+        /// en juego mediante el gizmo; el valor real en tiempo de ejecución
+        /// reside en <see cref="CompRobotRepairStation.repairThreshold"/>.
+        /// </summary>
         public float repairHealthThreshold = 0.5f;
 
         /// <summary>HP curados por tick por cada lesión activa.</summary>
@@ -30,7 +38,7 @@ namespace RobotRepairStation
         /// </summary>
         public int repairTickInterval = 500;
 
-        /// <summary>Distancia máxima en celdas para que un mecanoid detecte esta estación.</summary>
+        /// <summary>Distancia máxima en celdas para que un mecanoide detecte esta estación.</summary>
         public float maxRepairRange = 30f;
 
         public CompProperties_RobotRepairStation()
@@ -46,8 +54,14 @@ namespace RobotRepairStation
 
     /// <summary>
     /// Componente adjunto a <see cref="Building_RobotRepairStation"/>.
-    /// Aplica curación a las lesiones activas del mecanoid docked cada
+    /// Aplica curación a las lesiones activas del mecanoide docked cada
     /// <see cref="CompProperties_RobotRepairStation.repairTickInterval"/> ticks.
+    ///
+    /// Responsabilidades de este comp:
+    /// - Mantener el umbral de salud ajustado por el jugador (<see cref="repairThreshold"/>),
+    ///   serializado con Scribe_Values para que persista entre sesiones.
+    /// - Aplicar curación tick a tick cuando hay ocupante con acero disponible.
+    /// - Disparar la carta de reparación completa al llegar al 99 % de salud.
     ///
     /// El mismo offset de tick usado en <see cref="Building_RobotRepairStation.Tick"/>
     /// se aplica aquí para que ambos ciclos (consumo de acero y curación) estén
@@ -55,11 +69,48 @@ namespace RobotRepairStation
     /// </summary>
     public class CompRobotRepairStation : ThingComp
     {
+        // ─── Estado serializable ──────────────────────────────────────────────
+
+        /// <summary>
+        /// Umbral de salud (0–1) ajustado por el jugador para ESTA instancia.
+        /// Inicializado con el valor de Props en la primera carga.
+        /// Modificable en juego desde el gizmo de la estación.
+        /// </summary>
+        public float repairThreshold = -1f; // -1 = "no inicializado aún"
+
+        // ─── Propiedades ──────────────────────────────────────────────────────
+
         public CompProperties_RobotRepairStation Props =>
             (CompProperties_RobotRepairStation)props;
 
         private Building_RobotRepairStation Station =>
             (Building_RobotRepairStation)parent;
+
+        // ─── Ciclo de vida ────────────────────────────────────────────────────
+
+        public override void PostSpawnSetup(bool respawningAfterLoad)
+        {
+            base.PostSpawnSetup(respawningAfterLoad);
+
+            // Primera vez que se coloca o se carga un save antiguo sin el campo:
+            // copiar el valor de Props como valor inicial por instancia.
+            if (repairThreshold < 0f)
+                repairThreshold = Props.repairHealthThreshold;
+        }
+
+        // ─── Serialización ────────────────────────────────────────────────────
+
+        public override void PostExposeData()
+        {
+            base.PostExposeData();
+            Scribe_Values.Look(ref repairThreshold, "repairThreshold", Props.repairHealthThreshold);
+
+            // Guardia de seguridad: si el valor quedó corrupto, restaurar el default.
+            if (repairThreshold < 0f || repairThreshold > 1f)
+                repairThreshold = Props.repairHealthThreshold;
+        }
+
+        // ─── Tick ─────────────────────────────────────────────────────────────
 
         /// <summary>
         /// Ejecutado cada tick por RimWorld (requiere <c>tickerType Normal</c> en el ThingDef).
@@ -88,9 +139,11 @@ namespace RobotRepairStation
             ApplyRepairTick(pawn);
         }
 
+        // ─── Lógica de curación ───────────────────────────────────────────────
+
         /// <summary>
         /// Aplica <see cref="CompProperties_RobotRepairStation.repairSpeedPerTick"/> a cada
-        /// <see cref="Hediff_Injury"/> activa (no permanente) del mecanoid.
+        /// <see cref="Hediff_Injury"/> activa (no permanente) del mecanoide.
         ///
         /// Se itera directamente sobre <c>hediffs</c> sin crear una lista intermedia
         /// para evitar allocaciones innecesarias en un método llamado frecuentemente.
@@ -113,17 +166,23 @@ namespace RobotRepairStation
         }
 
         /// <summary>
-        /// Notifica al jugador y libera el slot de ocupante cuando la reparación termina.
-        /// El driver de <see cref="JobDriver_RepairAtStation"/> detecta
-        /// <c>CurrentOccupant == null</c> en su <c>tickAction</c> y finaliza el job.
+        /// Notifica al jugador mediante una carta persistente y libera el slot de ocupante
+        /// cuando la reparación termina. El driver de <see cref="JobDriver_RepairAtStation"/>
+        /// detecta <c>CurrentOccupant == null</c> en su <c>tickAction</c> y finaliza el job.
         /// </summary>
         private void OnRepairComplete(Pawn mechanoid)
         {
-            Messages.Message(
+            // Carta persistente (aparece en el historial de letras, no desaparece sola).
+            Find.LetterStack.ReceiveLetter(
+                "RRS_LetterRepairCompleteLabel".Translate(),
                 "RRS_LetterRepairCompleteText".Translate(mechanoid.LabelShort),
-                mechanoid,
-                MessageTypeDefOf.PositiveEvent
+                LetterDefOf.PositiveEvent,
+                mechanoid
             );
+
+            // Efecto visual en la posición del mecanoide al completar la reparación.
+            if (mechanoid.Spawned)
+                FleckMaker.ThrowLightningGlow(mechanoid.DrawPos, mechanoid.Map, 2f);
 
             Station.NotifyOccupantLeft();
         }

@@ -6,10 +6,15 @@
   <RRS_InspectorEmpty>Ocioso - aguardando mecanoide danificado</RRS_InspectorEmpty>
   <RRS_InspectorNoPower>Sem energia - estacao off-line</RRS_InspectorNoPower>
   <RRS_InspectorNoSteel>Sem aco - reparo interrompido</RRS_InspectorNoSteel>
+  <RRS_InspectorETA>Tempo estimado restante: {0}</RRS_InspectorETA>
+  <RRS_InspectorThreshold>Limiar de reparo: {0}</RRS_InspectorThreshold>
+  <RRS_InspectorPriority>Prioridade da estacao: {0}</RRS_InspectorPriority>
 
   <!-- Gizmos -->
   <RRS_GizmoSetThreshold>Definir limiar de reparo</RRS_GizmoSetThreshold>
   <RRS_GizmoSetThresholdDesc>Define o percentual de saude abaixo do qual os mecanoidesirao procurar esta estacao de reparo.</RRS_GizmoSetThresholdDesc>
+  <RRS_GizmoPriority>Prioridade da estacao</RRS_GizmoPriority>
+  <RRS_GizmoPriorityDesc>Define a prioridade desta estacao de reparo. Os mecanoides preferem a estacao com o menor numero de prioridade (1 = maxima prioridade). Clique para alternar entre os valores 1-9.</RRS_GizmoPriorityDesc>
   <RRS_GizmoEjectOccupant>Expulsar mecanoide</RRS_GizmoEjectOccupant>
   <RRS_GizmoEjectOccupantDesc>Forca o mecanoide atual a deixar a estacao de reparo.</RRS_GizmoEjectOccupantDesc>
 
