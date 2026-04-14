@@ -11,17 +11,12 @@ namespace RobotRepairStation
     /// <summary>
     /// Edificio principal del Robot Repair Station.
     ///
-    /// Gestiona el ciclo de vida del ocupante, el consumo de acero vía
-    /// <see cref="CompRefuelable"/>, la persistencia save/load y la UI
-    /// (gizmos + inspector).
+    /// Gestiona el ciclo de vida del ocupante, el consumo de acero vía CompRefuelable, la persistencia save/load y la UI (gizmos + inspector).
     ///
-    /// El acero ya no se busca manualmente en el mapa: RimWorld gestiona
-    /// automáticamente el reabastecimiento mediante trabajos de transporte
+    /// El acero ya no se busca manualmente en el mapa: RimWorld gestiona automáticamente el reabastecimiento mediante trabajos de transporte
     /// asignados a colonos, igual que el generador de combustible.
     ///
-    /// La lógica de curación tick a tick reside en
-    /// <see cref="CompRobotRepairStation"/> para mantener las
-    /// responsabilidades separadas.
+    /// La lógica de curación tick a tick reside en CompRobotRepairStation para mantener las responsabilidades separadas.
     /// </summary>
     public class Building_RobotRepairStation : Building
     {
@@ -29,6 +24,9 @@ namespace RobotRepairStation
 
         /// <summary>Mecanoide actualmente en reparación. Serializado como referencia.</summary>
         private Pawn currentOccupant;
+
+        /// <summary>Prioridad de la estación para ThinkNode_ConditionalNeedsRepair. Serializable.</summary>
+        private int stationPriority = 0;
 
         // NOTA: steelBuffer eliminado — CompRefuelable es ahora la única fuente
         // de verdad sobre el nivel de acero disponible.
@@ -62,6 +60,13 @@ namespace RobotRepairStation
 
         /// <summary>El mecanoide docked, o <c>null</c> si la estación está libre.</summary>
         public Pawn CurrentOccupant => currentOccupant;
+
+        /// <summary>Prioridad de la estación (accesible para ThinkNodes y otros sistemas).</summary>
+        public int StationPriority
+        {
+            get => stationPriority;
+            set => stationPriority = value;
+        }
 
         // ═══════════════════════════════════════════════════════════════════════
         //  CICLO DE VIDA
@@ -99,8 +104,8 @@ namespace RobotRepairStation
             if (!hasActiveJob)
             {
                 Log.Warning(
-                    $"[RobotRepairStation] {currentOccupant.LabelShort} estaba registrado en" +
-                    $" {Label} pero no tiene el job de reparación activo ni en cola. Limpiando estado.");
+                   $"[RobotRepairStation] {currentOccupant.LabelShort} estaba registrado en" +
+                   $" {Label} pero no tiene el job de reparación activo ni en cola. Limpiando estado.");
                 currentOccupant = null;
             }
         }
@@ -123,6 +128,7 @@ namespace RobotRepairStation
         {
             base.ExposeData();
             Scribe_References.Look(ref currentOccupant, "currentOccupant");
+            Scribe_Values.Look(ref stationPriority, "stationPriority", 0);
             // steelBuffer eliminado: CompRefuelable serializa su propio estado.
         }
 
